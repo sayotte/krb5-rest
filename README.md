@@ -1,4 +1,4 @@
-krb5-rest
+t
 =========
 
 Sinatra-based REST server for managing Kerberos principals and keytabs.
@@ -17,7 +17,8 @@ Principals
 Creates a new principal.
 
 Expects a JSON body like so:
-{ "name": "principal/name.goes.here@DOMAIN.TLD"}
+
+        { "name": "principal/name.goes.here@DOMAIN.TLD"}
 
 ### DELETE /api/principals/url-encoded-principal-goes-here
 Deletes an existing principal.
@@ -42,10 +43,11 @@ Dependencies
 Krb5-REST was developed under Ruby-1.8.7. You should *probably* run it under a more recent Ruby, but the support is there if you want it.
 
 The following Ruby Gems are required:
- *   json
- *   json-schema
- *   sinatra
- *   thin
+
+*   json
+*   json-schema
+*   sinatra
+*   thin
 
 System Configuration
 --------------------
@@ -61,6 +63,7 @@ The current set of config knobs being used can be dumped in YAML format (the for
 Should one want to change any value from the default, they could pipe that output into a file named "config.yaml", and then modify the appropriate line. 
 
 Here's the output when using only defaults:
+
 	--- !ruby/object:Krb5REST::Config 
 	keytab_registry: ./keytab_registry.txt
 	listen_port: 6789
@@ -79,6 +82,7 @@ Here's the output when using only defaults:
 Startup
 -------
 Just run the "krb5-rest" executable, e.g.:
+
 	./krb5-rest
 
 Security
@@ -108,7 +112,7 @@ All write-operations require a JSON body specifying the relevant arguments. This
 Miscellaneous
 -------------
 I plan to add features to:
+
 *   restrict the set of principals that can be created
 *   prevent keytabs from being re-created
 *   disable the principal-deletion feature by default
-
