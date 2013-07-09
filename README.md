@@ -58,6 +58,7 @@ Application Configuration
 The server is configured via a YAML file, 'config.yaml'. When empty or not present, a set of defaults are used. 
 
 The current set of config knobs being used can be dumped in YAML format (the format required for the config file itself) by running this snippet in the top-level directory:
+
 	ruby -e 'require "config"; c = Krb5REST::Config.instance; puts YAML.dump(c)'
 
 Should one want to change any value from the default, they could pipe that output into a file named "config.yaml", and then modify the appropriate line. 
@@ -70,6 +71,7 @@ Here's the output when using only defaults:
 	log_use_stderr: true
 	log_use_stdout: false
 	log_use_syslog: true
+	princnames_rules: ./principal-names-rules.txt
 	sinatra_raise_errors: true
 	sinatra_show_exceptions: false
 	spec_path: ./apispec
@@ -78,6 +80,18 @@ Here's the output when using only defaults:
 	ssl_keyfile: ./ssl/privkey.pem
 	ssl_verifypeer: false
 	syslog_ident: krb5_rest
+
+Security Configuration
+----------------------
+This section is still a little thin, hehe.
+
+Creation of principals can be controlled using the file "principal-names-rules.txt" file in the top-level directory (or whatever file is specified in config.yaml under the 'princnames_rules' key). 
+
+Each line in the file is compiled into a regular expression and compared to the principal name for any incoming creation-request; if no lines in the file match the requested name, the request will be rejected.
+
+If this file does not exist a new one will be created with a single rule, ".*", effectively permitting everything. To be clear: _the default behavior is to permit everything_.
+
+If, instead, the file exists but is empty (e.g. created by using the 'touch' command in the shell), no requests will be matched, and all will be denied.
 
 Startup
 -------
@@ -90,8 +104,8 @@ Security
 
 Authorization
 -------------
-None.
-
+None per-user (since there is no authentication).
+Rules may be specified around what principals may be created, using the 'principal-names-rules.txt' file.
 
 Authentication
 --------------
@@ -113,6 +127,5 @@ Miscellaneous
 -------------
 I plan to add features to:
 
-*   restrict the set of principals that can be created
 *   prevent keytabs from being re-created
 *   disable the principal-deletion feature by default
