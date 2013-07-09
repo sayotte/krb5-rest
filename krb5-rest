@@ -72,14 +72,18 @@ module Krb5REST
 		cmdline = "sudo /opt/krb5-1.11/sbin/kadmin.local"
 		input = "addprinc -randkey #{args['name']}\n"
 		output = Krb5REST::Util.run(cmdline, input)
-		puts JSON.pretty_generate(output) + "\n"
+		return 200, JSON.pretty_generate(output) + "\n"
 	end
 
 	def self.delete(args)
+		config = Krb5REST::Config.instance
+		if(config['principal_delete_enable'] == false)
+			return 403, "Principal deletion is disabled\n"
+		end
 		cmdline = "sudo /opt/krb5-1.11/sbin/kadmin.local"
 		input = "delprinc #{args['name']}\nyes\n"
 		output = Krb5REST::Util.run(cmdline, input)
-		puts JSON.pretty_generate(output) + "\n"
+		return 200, JSON.pretty_generate(output) + "\n"
 	end
 
   end
@@ -160,14 +164,24 @@ module Krb5REST
 			halt status, msg
 			return
 		end
-		Krb5REST::Principals.create(JSON.parse(body))
+		status, msg = Krb5REST::Principals.create(JSON.parse(body))
+		if(status != 0)
+			halt status, msg
+			return
+		end
+		msg
 	end
 
 	delete '/api/principals/*' do
 		log.debug("#{__FILE__}:#{__LINE__}: in '#{__method__}'")
 		args = {}
 		args['name'] = CGI::unescape(params['captures'][0])
-		Principals.delete(args)
+		status, msg = Principals.delete(args)
+		if(status != 0)
+			halt status, msg
+			return
+		end
+		msg
 	end
 
 	put '/api/keytabs' do
