@@ -1,0 +1,3 @@
+#!/bin/bash
+BODY="{\"name\": \"$1\"}"
+curl -XPUT --data-ascii "$BODY" -k https://localhost:6789/api/keytabs

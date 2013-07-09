@@ -1,0 +1,182 @@
+#!/usr/bin/ruby
+
+# ##############################################################################
+# Copyright (C) 2013 Stephen Ayotte <stephen.ayotte@gmail.com>
+# 
+# All rights reserved.
+# 
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met: 
+# 
+# 1. Redistributions of source code must retain the above copyright notice, this
+#    list of conditions and the following disclaimer. 
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+#    this list of conditions and the following disclaimer in the documentation
+#    and/or other materials provided with the distribution. 
+# 
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
+# ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+# LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+# ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+# SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+# 
+# The views and conclusions contained in the software and documentation are those
+# of the authors and should not be interpreted as representing official policies, 
+# either expressed or implied, of Stephen Ayotte.
+# 
+# ##############################################################################
+
+require 'base64'
+require 'rubygems'
+require 'json'
+require 'yaml'
+require 'cgi'
+require 'sinatra/base'
+require './util'
+require './config'
+require './logger'
+
+module Krb5REST
+  module Principals
+	def self.create(args)
+		cmdline = "sudo /opt/krb5-1.11/sbin/kadmin.local"
+		input = "addprinc -randkey #{args['name']}\n"
+		output = Krb5REST::Util.run(cmdline, input)
+		puts JSON.pretty_generate(output) + "\n"
+	end
+
+	def self.delete(args)
+		cmdline = "sudo /opt/krb5-1.11/sbin/kadmin.local"
+		input = "delprinc #{args['name']}\nyes\n"
+		output = Krb5REST::Util.run(cmdline, input)
+		puts JSON.pretty_generate(output) + "\n"
+	end
+
+  end
+
+  module Keytabs
+	def self.create(args)
+		# Create the keytab
+		cmdline = "sudo /opt/krb5-1.11/sbin/kadmin.local"
+		ktname = args['name'].gsub(/@.+/, '').gsub(/.+\//, '')
+		input = "ktadd -k #{ktname} #{args['name']}"
+		output = Krb5REST::Util.run(cmdline, input)
+		retstr = JSON.pretty_generate(output) + "\n"
+
+		# Chown it so that we can read it
+		myuid = Process.euid
+		cmdline = "sudo chown #{myuid} #{ktname}"
+		output = Krb5REST::Util.run(cmdline, input)
+		retstr += JSON.pretty_generate(output) + "\n"
+
+		puts retstr
+	end
+
+	def self.get(args)
+		config = Krb5REST::Config.instance
+		log = Krb5REST::Logger.instance
+		ktname = args['name'].gsub(/@.+/, '').gsub(/.+\//, '')
+		if(!File.readable?(ktname) or !File.exists?(ktname))
+			log.info("Requested keytab '#{ktname}' not found or unreadable")
+			return 404, "File not found or unreadable\n"
+		end
+
+		# Make sure we can get to the registry of keytabs we've issued
+		if(File.exists?(config['keytab_registry']) and (!File.readable?(config['keytab_registry']) or
+		                                                !File.writable?(config['keytab_registry'])))
+			log.err("Keytab registry file '#{config['keytab_registry']}' exists but is not accessible")
+			return 500, "Internal server error\n"
+		end
+		if(!File.exists?(config['keytab_registry']))
+			log.warning("Keytab registry doesn't exist, creating a new/empty one")
+			File.open(config['keytab_registry'], mode='w'){|file| file.write("placeholder\n")}
+		end
+		   
+		# Check for presence in the keytab registry
+		reglines = []
+		File.open(config['keytab_registry'], mode='r').each_line{|line| reglines.push line.strip}
+		if(reglines.include? ktname)
+			return 403, "Keytab #{ktname} has already been issued and may not be re-issued\n"
+		end
+
+		# Mark the registry to ensure this keytab is not re-issued
+		File.open(config['keytab_registry'], mode='a'){|file| file.write("#{ktname}\n")}
+
+		# Serve up the keytab
+		content = File.open(ktname, mode='rb'){|file| file.read }
+		return 0, content
+	end
+  end
+
+  class Server < Sinatra::Base
+	config = Krb5REST::Config.instance
+	log = Krb5REST::Logger.instance
+
+	set :port, config['listen_port']
+	set :show_exceptions, config['sinatra_show_exceptions']
+	set :raise_errors, config['sinatra_raise_errors']
+	set :server, %w[thin]
+	set :run, false
+
+	put '/api/principals' do
+		log.debug("#{__FILE__}:#{__LINE__}: in '#{__method__}'")
+		body = request.body.read
+		status, msg = Krb5REST::Util.validate('principals', body)
+		if(status != 0)
+			halt status, msg
+			return
+		end
+		Krb5REST::Principals.create(JSON.parse(body))
+	end
+
+	delete '/api/principals/*' do
+		log.debug("#{__FILE__}:#{__LINE__}: in '#{__method__}'")
+		args = {}
+		args['name'] = CGI::unescape(params['captures'][0])
+		Principals.delete(args)
+	end
+
+	put '/api/keytabs' do
+		log.debug("#{__FILE__}:#{__LINE__}: in '#{__method__}'")
+		body = request.body.read
+		status, msg = Krb5REST::Util.validate('principals', body)
+		if(status != 0)
+			halt status, msg
+			return
+		end
+		Krb5REST::Keytabs.create(JSON.parse(body))
+	end
+
+	get '/api/keytabs/*' do
+		log.debug("#{__FILE__}:#{__LINE__}: in '#{__method__}'")
+		args = {}
+		args['name'] = CGI::unescape(params['captures'][0])
+		content_type 'application/octet-stream'
+		status, content = Krb5REST::Keytabs.get(args)
+		if(status != 0)
+			halt status, content
+			return
+		end
+		content
+	end
+  end
+end
+
+Krb5REST::Server.run! do |server|
+	c = Krb5REST::Config.instance
+	if(c['ssl_enable'])
+		ssl_options = {
+			:cert_chain_file => c['ssl_certfile'],
+			:private_key_file => c['ssl_keyfile'],
+			:verify_perr => c['ssl_verifypeer'],
+		}
+		server.ssl = true
+		server.ssl_options = ssl_options
+	end
+	server
+end
