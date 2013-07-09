@@ -69,7 +69,7 @@ module Krb5REST
 			return 403, "Principal name #{args['name']} disallowed\n"
 		end
 
-		cmdline = "sudo /opt/krb5-1.11/sbin/kadmin.local"
+		cmdline = "sudo #{config['kadmin_executable']}"
 		input = "addprinc -randkey #{args['name']}\n"
 		output = Krb5REST::Util.run(cmdline, input)
 		return 200, JSON.pretty_generate(output) + "\n"
@@ -80,7 +80,7 @@ module Krb5REST
 		if(config['principal_delete_enable'] == false)
 			return 403, "Principal deletion is disabled\n"
 		end
-		cmdline = "sudo /opt/krb5-1.11/sbin/kadmin.local"
+		cmdline = "sudo #{config['kadmin_executable']}"
 		input = "delprinc #{args['name']}\nyes\n"
 		output = Krb5REST::Util.run(cmdline, input)
 		return 200, JSON.pretty_generate(output) + "\n"
@@ -90,8 +90,9 @@ module Krb5REST
 
   module Keytabs
 	def self.addPrincipal(args)
+		config = Krb5REST::Config.instance
 		# Create the keytab
-		cmdline = "sudo /opt/krb5-1.11/sbin/kadmin.local"
+		cmdline = "sudo #{config['kadmin_executable']}"
 		ktname = args['name'].gsub(/@.+/, '').gsub(/.+\//, '')
 		input = "ktadd -k #{ktname} #{args['name']}"
 		output = Krb5REST::Util.run(cmdline, input)
@@ -107,6 +108,7 @@ module Krb5REST
 	end
 
 	def self.create(args)
+		config = Krb5REST::Config.instance
 		$stderr.puts "Not yet implemented!"
 	end
 

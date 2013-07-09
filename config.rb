@@ -54,6 +54,7 @@ module Krb5REST
   class Config
 	include Singleton
 
+	attr_accessor	:kadmin_executable
 	attr_accessor	:keytab_registry
 	attr_accessor	:listen_port
 	attr_accessor	:log_use_stderr
@@ -73,6 +74,7 @@ module Krb5REST
 
 	def defaults
 		defaults = {
+			'kadmin_executable'		=> '/usr/sbin/kadmin.local',
 			'keytab_registry'		=> './keytab_registry.txt',
 			'listen_port'			=> 6789,
 			'log_use_stderr'		=> true,
