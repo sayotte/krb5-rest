@@ -59,6 +59,7 @@ module Krb5REST
 	attr_accessor	:log_use_stderr
 	attr_accessor	:log_use_stdout
 	attr_accessor	:log_use_syslog
+	attr_accessor	:princnames_rules
 	attr_accessor	:spec_path
 	attr_accessor	:sinatra_raise_errors
 	attr_accessor	:sinatra_show_exceptions
@@ -76,6 +77,7 @@ module Krb5REST
 			'log_use_stderr'		=> true,
 			'log_use_stdout'		=> false,
 			'log_use_syslog'		=> true,
+			'princnames_rules'		=> './principal-names-rules.txt',
 			'sinatra_raise_errors'		=> true,
 			'sinatra_show_exceptions' 	=> false,
 			'spec_path'			=> './apispec',

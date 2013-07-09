@@ -44,6 +44,31 @@ require './logger'
 module Krb5REST
   module Principals
 	def self.create(args)
+		config = Krb5REST::Config.instance
+		log = Krb5REST::Logger.instance
+		# Make sure we can get to the registry of keytabs we've issued
+		if(File.exists?(config['princnames_rules']) and (!File.readable?(config['keytab_registry']) or
+		                                                !File.writable?(config['princnames_rules'])))
+			log.err("Principal-names rules file '#{config['princnames_rules']}' exists but is not accessible")
+			return 500, "Internal server error\n"
+		end
+		if(!File.exists?(config['princnames_rules']))
+			log.warning("Principal-names rules doesn't exist, creating a new/permissive one")
+			File.open(config['princnames_rules'], mode='w'){|file| file.write(".*\n")}
+		end
+		   
+		# Check for presence in the keytab registry
+		rules_succeed = false
+		File.open(config['princnames_rules'], mode='r').each_line do |line|
+			regexp = Regexp.compile(line.strip)
+			if(regexp.match(args['name']))
+				rules_succeed = true
+			end
+		end
+		if(rules_succeed == false)
+			return 403, "Principal name #{args['name']} disallowed\n"
+		end
+
 		cmdline = "sudo /opt/krb5-1.11/sbin/kadmin.local"
 		input = "addprinc -randkey #{args['name']}\n"
 		output = Krb5REST::Util.run(cmdline, input)
@@ -60,7 +85,7 @@ module Krb5REST
   end
 
   module Keytabs
-	def self.create(args)
+	def self.addPrincipal(args)
 		# Create the keytab
 		cmdline = "sudo /opt/krb5-1.11/sbin/kadmin.local"
 		ktname = args['name'].gsub(/@.+/, '').gsub(/.+\//, '')
@@ -75,6 +100,10 @@ module Krb5REST
 		retstr += JSON.pretty_generate(output) + "\n"
 
 		puts retstr
+	end
+
+	def self.create(args)
+		$stderr.puts "Not yet implemented!"
 	end
 
 	def self.get(args)
@@ -149,7 +178,30 @@ module Krb5REST
 			halt status, msg
 			return
 		end
-		Krb5REST::Keytabs.create(JSON.parse(body))
+		status, msg = Krb5REST::Keytabs.create(JSON.parse(body))
+		if(status != 0)
+			halt status, msg
+			return
+		end
+		msg
+	end
+
+	post '/api/keytabs/*' do
+		log.debug("#{__FILE__}:#{__LINE__}: in '#{__method__}'")
+		body = request.body.read
+		status, msg = Krb5REST::Util.validate('principals', body)
+		args = JSON.parse(body)
+		args['name'] = CGI::unescape(params['captures'][0])
+		if(status != 0)
+			halt status, msg
+			return
+		end
+		status, msg = Krb5REST::Keytabs.addPrincipal(args)
+		if(status != 0)
+			halt status, msg
+			return
+		end
+		msg
 	end
 
 	get '/api/keytabs/*' do
