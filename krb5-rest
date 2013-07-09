@@ -46,7 +46,7 @@ module Krb5REST
 	def self.create(args)
 		config = Krb5REST::Config.instance
 		log = Krb5REST::Logger.instance
-		# Make sure we can get to the registry of keytabs we've issued
+		# Make sure we can get to the rules file
 		if(File.exists?(config['princnames_rules']) and (!File.readable?(config['keytab_registry']) or
 		                                                !File.writable?(config['princnames_rules'])))
 			log.err("Principal-names rules file '#{config['princnames_rules']}' exists but is not accessible")
@@ -57,7 +57,7 @@ module Krb5REST
 			File.open(config['princnames_rules'], mode='w'){|file| file.write(".*\n")}
 		end
 		   
-		# Check for presence in the keytab registry
+		# Check for a match in the rules file
 		rules_succeed = false
 		File.open(config['princnames_rules'], mode='r').each_line do |line|
 			regexp = Regexp.compile(line.strip)
