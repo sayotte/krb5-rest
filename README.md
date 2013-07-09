@@ -51,6 +51,8 @@ The following Ruby Gems are required:
 *   sinatra
 *   thin
 
+The application itself must be run from the KDC (or *a* KDC) since it uses kadmin.local to edit the Kerberos database.
+
 System Configuration
 --------------------
 The application expects to be running as a user who has sudo privileges to run the "kadmin.local" command, so sudo should be configured appropriately. Yes, this is actually a lot of power to put in the hands of a little Ruby script, but it doesn't have many moving parts to break down.
@@ -67,12 +69,13 @@ Should one want to change any value from the default, they could pipe that outpu
 
 Here's the output when using only defaults:
 
-	--- !ruby/object:Krb5REST::Config 
+	kadmin_executable: /usr/sbin/kadmin.local
 	keytab_registry: ./keytab_registry.txt
 	listen_port: 6789
 	log_use_stderr: true
 	log_use_stdout: false
 	log_use_syslog: true
+	principal_delete_enable: false
 	princnames_rules: ./principal-names-rules.txt
 	sinatra_raise_errors: true
 	sinatra_show_exceptions: false
@@ -82,6 +85,8 @@ Here's the output when using only defaults:
 	ssl_keyfile: ./ssl/privkey.pem
 	ssl_verifypeer: false
 	syslog_ident: krb5_rest
+
+You'll want to edit the 'kadmin_executable' at a minimum, since that's probably *not* where your Kerberos package installed kadmin.local.
 
 Security Configuration
 ----------------------
