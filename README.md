@@ -92,6 +92,9 @@ Security Configuration
 ----------------------
 This section is still a little thin, hehe.
 
+#### SSL
+_Replace the SSL certs provided with your own; nothing is secret when everyone has the keys._
+
 #### Principal creation control
 Creation of principals can be controlled using the file "principal-names-rules.txt" file in the top-level directory (or whatever file is specified in config.yaml under the 'princnames_rules' key). 
 
