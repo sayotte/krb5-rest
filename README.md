@@ -7,33 +7,6 @@ Overview
 ========
 This tool was developed to solve the problem of hosts powering-on in a datacenter and acquiring an identity, without a priori knowledge of their arrival or hostname. As part of their imaging process, they should be able to create a principal for themselves and obtain a keytab containing the secrets associated with that principal, all without having user-level access to the KDC.
 
-Security
-========
-
-Authorization
--------------
-None.
-
-
-Authentication
---------------
-None.
-
-Replay Attacks
---------------
-Each host (regardless of the number of service principals associated with it) can have exactly one keytab, and that keytab can be downloaded exactly one time.
-
-Secrecy
--------
-Sinatra supports SSL (through Thin), and it's enabled by default in Krb5-REST. Client-cert verification is disabled, since that would require acquiring a cryptographic identity that would likely obviate the need for this tool to begin with.
-
-Miscellaneous
--------------
-I plan to add features to:
-*   restrict the set of principals that can be created
-*   prevent keytabs from being re-created
-*   disable the principal-deletion feature by default
-
 API
 ===
 
@@ -60,4 +33,35 @@ Expects a JSON body containing the name of the principal in question, as in the 
 ### GET /api/keytabs/keytab.name.goes.here
 Streams the keytab file in binary form (MIME type 'application/octet-stream').
 Marks the "keytab registry" so that this keytab may not be downloaded again.
+
+Security
+========
+
+Authorization
+-------------
+None.
+
+
+Authentication
+--------------
+None.
+
+Replay Attacks
+--------------
+Each host (regardless of the number of service principals associated with it) can have exactly one keytab, and that keytab can be downloaded exactly one time.
+
+Secrecy
+-------
+Sinatra supports SSL (through Thin), and it's enabled by default in Krb5-REST. Client-cert verification is disabled, since that would require acquiring a cryptographic identity that would likely obviate the need for this tool to begin with.
+
+Malformed Queries
+-----------------
+All write-operations require a JSON body specifying the relevant arguments. This JSON is validated against a specfile to ensure it is well-formed.
+
+Miscellaneous
+-------------
+I plan to add features to:
+*   restrict the set of principals that can be created
+*   prevent keytabs from being re-created
+*   disable the principal-deletion feature by default
 
