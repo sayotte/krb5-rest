@@ -1,4 +1,4 @@
-t
+Krb5-REST
 =========
 
 Sinatra-based REST server for managing Kerberos principals and keytabs.
