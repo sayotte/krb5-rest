@@ -3,6 +3,9 @@ Krb5-REST
 
 Sinatra-based REST server for managing Kerberos principals and keytabs.
 
+This was created as a proof-of-concept and I make no claims about its suitability for anything.
+Offhand, for the use-case for which it was designed, it's probably better to pre-create all the principals/keytabs, and only let them be downloaded a single time... which wouldn't require any use of kadmin.local at all, and would ensure that only one client was able to grab a copy of the keytab (which is really the whole point).
+
 Overview
 ========
 This tool was developed to solve the problem of hosts powering-on in a datacenter and acquiring an identity, without a priori knowledge of their arrival or hostname. As part of their imaging process, they should be able to create a principal for themselves and obtain a keytab containing the secrets associated with that principal, all without having user-level access to the KDC.
